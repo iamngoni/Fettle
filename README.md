@@ -77,6 +77,11 @@ device switching, global hotkeys, and preference persistence are implemented. Th
 build, but their runtime behavior is hardware/permission-dependent and benefits
 from per-machine verification.
 
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for how the
+tool architecture works and how to add a new tool.
+
 ## License
 
-TBD.
+[MIT](LICENSE) © Ngonidzashe Mangudya
