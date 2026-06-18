@@ -30,10 +30,9 @@ struct DashboardView: View {
 
     private var header: some View {
         HStack {
-            HStack(spacing: 10) {
-                IconTile(symbol: "moon.stars.fill", tint: Theme.accent, gradient: true)
-                Text("Fettle").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-            }
+            Text("Fettle")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Theme.textPrimary)
             Spacer()
             if app.activeCount > 0 {
                 StatusPill(text: "\(app.activeCount) Active", color: Theme.green)

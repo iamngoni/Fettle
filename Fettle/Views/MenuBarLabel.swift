@@ -4,22 +4,12 @@ struct MenuBarLabel: View {
     var appState: AppState
 
     var body: some View {
-        Group {
-            if let symbol = symbol {
-                Image(systemName: symbol)
-            } else {
-                Image("FettleMenuBarIcon")
-                    .renderingMode(.template)
-            }
-        }
+        // One neutral, monochrome Fettle mark — it never morphs into
+        // tool-specific metaphors (no coffee cup, no pill, no lock) so Fettle
+        // never visually apes Lungo, Caffeine, Amphetamine, etc. Tool state is
+        // shown inside the panel, not by impersonating another app's icon.
+        Image("FettleMenuBarIcon")
+            .renderingMode(.template)
             .accessibilityLabel("Fettle")
-    }
-
-    private var symbol: String? {
-        if appState.cleanMode.isActive { return "lock.fill" }
-        if appState.micMute.isActive { return "mic.slash.fill" }
-        if appState.presentation.isActive { return "videoprojector.fill" }
-        if appState.keepAwake.isActive { return "cup.and.saucer.fill" }
-        return nil
     }
 }
