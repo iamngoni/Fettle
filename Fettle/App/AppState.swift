@@ -28,7 +28,7 @@ final class AppState {
     init() {
         launchAtLogin = LaunchAtLogin.isEnabled
         presentation.configure(keepAwake: keepAwake, hideDesktop: hideDesktop, micMute: micMute)
-        if keepAwake.activateOnLaunch { keepAwake.start() }
+        keepAwake.restoreOnLaunch()
     }
 
     var allTools: [any FettleTool] {

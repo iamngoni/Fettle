@@ -88,12 +88,45 @@ final class KeepAwakeTool: FettleTool {
         }
         startTickerIfNeeded()
         evaluate()
+        persistSession()
     }
 
     func stop() {
         manualOn = false
         endDate = nil
         evaluate()
+        persistSession()
+    }
+
+    /// Persists the live on/off session so it survives relaunch.
+    private func persistSession() {
+        Store.set(manualOn, "ka.manualOn")
+        Store.set(endDate?.timeIntervalSinceReferenceDate ?? 0, "ka.endDate")
+    }
+
+    /// Restores the session on launch: resumes an indefinite session, resumes a
+    /// timed session with its remaining time, or honors "Activate on launch".
+    func restoreOnLaunch() {
+        if Store.bool("ka.manualOn", default: false) {
+            let savedEnd = Store.double("ka.endDate", default: 0)
+            if savedEnd == 0 {                       // was indefinite
+                manualOn = true
+                endDate = nil
+                startTickerIfNeeded()
+                evaluate()
+                return
+            }
+            let end = Date(timeIntervalSinceReferenceDate: savedEnd)
+            if end > Date() {                        // timed session still has time left
+                manualOn = true
+                endDate = end
+                startTickerIfNeeded()
+                evaluate()
+                return
+            }
+            persistSession()                         // expired while quit → leave off
+        }
+        if activateOnLaunch { start() }
     }
 
     /// Decide whether the assertion should be held right now.
