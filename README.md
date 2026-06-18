@@ -37,22 +37,24 @@ keys that require root.
 
 ## Requirements
 
-- macOS 27+
-- Xcode 26 (beta) toolchain — Swift 6.4
+- macOS 27 or later
+- Xcode 26 or later (Swift 6.4)
 
 ## Building
+
+Open `Fettle.xcodeproj` in Xcode and run, or build from the command line:
+
+```sh
+xcodebuild -project Fettle.xcodeproj -scheme Fettle -configuration Release \
+  -destination 'platform=macOS' build
+```
 
 The repo uses Xcode's file-system-synchronized groups, so new files under
 `Fettle/` are picked up automatically.
 
-```sh
-# If your active developer dir is Command Line Tools, point at Xcode explicitly:
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer \
-  xcodebuild -project Fettle.xcodeproj -scheme Fettle -configuration Release \
-  -destination 'platform=macOS' build
-```
-
-Or just open `Fettle.xcodeproj` in Xcode and run.
+> If `xcodebuild` reports *"requires Xcode, but active developer directory is a
+> command line tools instance"*, point it at your Xcode:
+> `sudo xcode-select -s /Applications/Xcode.app`.
 
 Fettle is **not sandboxed** — the Clean Mode keyboard event tap and the battery
 helper can't run under App Sandbox.
