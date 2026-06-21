@@ -84,8 +84,6 @@ enum AudioProcessMonitor {
 final class ProcessTap: @unchecked Sendable {
     let processObject: AudioObjectID
     nonisolated(unsafe) private var gain: Float
-    nonisolated(unsafe) private var channelCount = 2
-    nonisolated(unsafe) private var inputNonInterleaved = false
 
     private var tapID: AudioObjectID = 0
     private var aggregateID: AudioObjectID = 0
@@ -132,9 +130,8 @@ final class ProcessTap: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain)
         if AudioObjectGetPropertyData(tapID, &fmtAddr, 0, nil, &fmtSize, &tapFormat) == noErr {
-            channelCount = Int(tapFormat.mChannelsPerFrame)
-            inputNonInterleaved = (tapFormat.mFormatFlags & kAudioFormatFlagIsNonInterleaved) != 0
-            log.log("Tap format: \(tapFormat.mChannelsPerFrame)ch @ \(tapFormat.mSampleRate)Hz nonInterleaved=\(self.inputNonInterleaved)")
+            let nonInterleaved = (tapFormat.mFormatFlags & kAudioFormatFlagIsNonInterleaved) != 0
+            log.log("Tap format: \(tapFormat.mChannelsPerFrame)ch @ \(tapFormat.mSampleRate)Hz nonInterleaved=\(nonInterleaved)")
         }
 
         let tapUID = description.uuid.uuidString
@@ -166,29 +163,7 @@ final class ProcessTap: @unchecked Sendable {
             let g = self.gain
             let input = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inInputData))
             let output = UnsafeMutableAudioBufferListPointer(outOutputData)
-            guard input.count > 0, output.count > 0,
-                  let dst = output[0].mData else { return }
-
-            let outChannels = max(1, Int(output[0].mNumberChannels))
-            let outFrames = Int(output[0].mDataByteSize) / (MemoryLayout<Float32>.size * outChannels)
-            let dp = dst.assumingMemoryBound(to: Float32.self)
-            let channels = self.channelCount
-
-            if self.inputNonInterleaved && input.count >= channels && outChannels == channels {
-                // Non-interleaved L/R… buffers → interleaved output, scaled.
-                for c in 0..<channels {
-                    guard let src = input[c].mData else { continue }
-                    let sp = src.assumingMemoryBound(to: Float32.self)
-                    let inFrames = Int(input[c].mDataByteSize) / MemoryLayout<Float32>.size
-                    let n = min(outFrames, inFrames)
-                    for f in 0..<n { dp[f * outChannels + c] = sp[f] * g }
-                }
-            } else if let src = input[0].mData {
-                // Interleaved → interleaved (or matching layout), scaled copy.
-                let sp = src.assumingMemoryBound(to: Float32.self)
-                let samples = min(Int(input[0].mDataByteSize), Int(output[0].mDataByteSize)) / MemoryLayout<Float32>.size
-                for s in 0..<samples { dp[s] = sp[s] * g }
-            }
+            AudioBufferGain.apply(input: input, output: output, gain: g)
         }
         guard status == noErr, let proc = ioProcID else {
             log.error("AudioDeviceCreateIOProcIDWithBlock failed: \(status)")

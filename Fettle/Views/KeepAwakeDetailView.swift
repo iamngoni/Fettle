@@ -59,7 +59,7 @@ struct KeepAwakeDetailView: View {
 
     private var primaryCard: some View {
         HStack(spacing: 12) {
-            IconTile(symbol: "cup.and.saucer.fill", tint: Theme.accent, size: 36, glyph: 20)
+            IconTile(symbol: "sun.max.fill", tint: Theme.accent, size: 36, glyph: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Keep Awake").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                 Text(tool.statusText).font(.system(size: 12)).foregroundStyle(tool.isActive ? Theme.accentLight : Theme.textMuted)

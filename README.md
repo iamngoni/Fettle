@@ -6,6 +6,27 @@ behind one menu-bar icon, no Dock clutter.
 
 > **fettle** *(noun)* — condition or state of health, spirits, and form.
 
+## Screenshots
+
+<p align="center">
+  <img src="images/dashboard.png" width="250" alt="Dashboard" />
+  <img src="images/keep-awake.png" width="250" alt="Keep Awake" />
+  <img src="images/audio-mixer.png" width="250" alt="Audio Mixer" />
+</p>
+<p align="center">
+  <img src="images/mic-mute.png" width="250" alt="Mic Mute" />
+  <img src="images/clean-mode.png" width="250" alt="Clean Mode" />
+  <img src="images/battery-limit.png" width="250" alt="Battery Limit" />
+</p>
+
+Clean Mode's full-screen overlay while the keyboard is locked:
+
+<p align="center">
+  <img src="images/clean-mode-overlay.png" width="600" alt="Clean Mode locked overlay" />
+</p>
+
+<sub>Renders from the design file (<code>fettle.pen</code>); the shipping UI matches.</sub>
+
 ## Tools
 
 | Tool | What it does |

@@ -6,7 +6,7 @@ import AppKit
 final class KeepAwakeTool: FettleTool {
     let kind: ToolID = .keepAwake
     let title = "Keep Awake"
-    let symbol = "cup.and.saucer.fill"
+    let symbol = "sun.max.fill"
     let tint = Theme.accent
     let section: ToolSection = .sessions
 
