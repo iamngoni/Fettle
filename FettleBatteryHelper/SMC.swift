@@ -6,14 +6,13 @@ import IOKit
 /// Charge limiting is hardware-specific:
 ///  • Intel Macs use the `BCLM` key (battery charge level max, a percentage).
 ///  • Apple Silicon has no single "limit" key; charging is gated by `CH0B`/`CH0C`
-///    (charge inhibit). We toggle inhibit around the target percentage from a
-///    monitor loop in `main.swift`.
+///    (charge inhibit), and `CH0I` forces discharge (run on battery while the
+///    adapter is connected). We drive these from the monitor loop in `main.swift`.
 ///
 /// NOTE: These keys and behaviors need on-device verification per Mac model.
 enum SMC {
     private static var connection: io_connect_t = 0
 
-    // SMC selectors / struct mirror Apple's private AppleSMC interface.
     private static let kSMCHandleYPCEvent: UInt32 = 2
     private static let kSMCReadKey: UInt8 = 5
     private static let kSMCWriteKey: UInt8 = 6
@@ -65,7 +64,6 @@ enum SMC {
         return output
     }
 
-    /// Writes a single-byte SMC key.
     @discardableResult
     static func writeByte(_ key: String, value: UInt8) -> Bool {
         var info = SMCKeyData()
@@ -113,6 +111,13 @@ enum SMC {
         let a = writeByte("CH0B", value: value)
         let b = writeByte("CH0C", value: value)
         return a || b
+    }
+
+    /// Forces discharge while on adapter power (Apple Silicon). `CH0I` = 1 makes
+    /// the Mac run from the battery even when plugged in.
+    @discardableResult
+    static func setDischarge(_ on: Bool) -> Bool {
+        writeByte("CH0I", value: on ? 0x01 : 0x00)
     }
 
     /// Intel: set BCLM directly. Returns true if applied.

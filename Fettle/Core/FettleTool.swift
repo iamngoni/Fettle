@@ -3,7 +3,9 @@ import SwiftUI
 /// Sections shown on the dashboard, in display order.
 enum ToolSection: String, CaseIterable, Identifiable {
     case sessions = "SESSIONS"
+    case tools = "CAPTURE & TOOLS"
     case inputAudio = "INPUT & AUDIO"
+    case windows = "WINDOWS & MORE"
     case system = "SYSTEM"
     var id: String { rawValue }
 }
@@ -11,6 +13,9 @@ enum ToolSection: String, CaseIterable, Identifiable {
 /// Stable identity for every tool. Adding a tool starts here.
 enum ToolID: String, CaseIterable, Identifiable, Hashable {
     case keepAwake, cleanMode, micMute, audioMixer, hideDesktop, presentation, battery
+    case captureText, devices, meetings, smartNotes
+    case calculator, convert, compress
+    case windowSnap, shortcuts, measure, notch
     var id: String { rawValue }
 }
 

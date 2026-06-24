@@ -19,6 +19,17 @@ final class AppState {
     let hideDesktop = HideDesktopTool()
     let presentation = PresentationTool()
     let battery = BatteryTool()
+    let captureText = CaptureTextTool()
+    let devices = DevicesTool()
+    let meetings = MeetingsTool()
+    let smartNotes = SmartNotesTool()
+    let calculator = CalculatorTool()
+    let convert = ConvertTool()
+    let compress = CompressTool()
+    let windowSnap = WindowSnapTool()
+    let shortcuts = ShortcutsTool()
+    let measure = MeasureTool()
+    let notch = NotchTool()
 
     var route: Route = .dashboard
     var launchAtLogin: Bool {
@@ -26,13 +37,22 @@ final class AppState {
     }
 
     init() {
+        FettleLog.setup()
         launchAtLogin = LaunchAtLogin.isEnabled
         presentation.configure(keepAwake: keepAwake, hideDesktop: hideDesktop, micMute: micMute)
         keepAwake.restoreOnLaunch()
+        shortcuts.configure(handlers: [
+            "mute":         { [micMute] in micMute.setActive(!micMute.isActive) },
+            "capture":      { [captureText] in captureText.triggerCapture() },
+            "notes":        { [smartNotes] in smartNotes.toggle() },
+            "keepAwake":    { [keepAwake] in keepAwake.setActive(!keepAwake.isActive) },
+            "presentation": { [presentation] in presentation.setActive(!presentation.isActive) },
+            "hideDesktop":  { [hideDesktop] in hideDesktop.setActive(!hideDesktop.isActive) },
+        ])
     }
 
     var allTools: [any FettleTool] {
-        [keepAwake, presentation, cleanMode, micMute, audioMixer, hideDesktop, battery]
+        [keepAwake, presentation, meetings, smartNotes, captureText, calculator, convert, compress, cleanMode, micMute, audioMixer, windowSnap, shortcuts, measure, notch, hideDesktop, battery, devices]
     }
 
     func tools(in section: ToolSection) -> [any FettleTool] {
@@ -52,6 +72,17 @@ final class AppState {
         case .hideDesktop: hideDesktop
         case .presentation: presentation
         case .battery: battery
+        case .captureText: captureText
+        case .devices: devices
+        case .meetings: meetings
+        case .smartNotes: smartNotes
+        case .calculator: calculator
+        case .convert: convert
+        case .compress: compress
+        case .windowSnap: windowSnap
+        case .shortcuts: shortcuts
+        case .measure: measure
+        case .notch: notch
         }
     }
 }

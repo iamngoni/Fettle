@@ -18,8 +18,6 @@ final class BatteryHelper {
     var isRegistered: Bool { service.status == .enabled }
     var needsApproval: Bool { service.status == .requiresApproval }
 
-    /// Registers the daemon. Returns false if registration failed; the system
-    /// may still require the user to approve it in System Settings > Login Items.
     @discardableResult
     func register() -> Bool {
         guard service.status != .enabled else { return true }
@@ -57,17 +55,26 @@ final class BatteryHelper {
         } as? BatteryHelperProtocol
     }
 
-    func setChargeLimit(_ percent: Int) {
+    /// Pushes the full charge policy to the daemon.
+    func apply(limit: Int, dischargeTo: Int, heatLimitC: Int, sailingBand: Int) {
         if !isRegistered { register() }
-        proxy({})?.setChargeLimit(percent) { [weak self] ok in
-            self?.log.log("setChargeLimit(\(percent)) -> \(ok)")
+        proxy({})?.apply(limit: limit, dischargeTo: dischargeTo, heatLimitC: heatLimitC, sailingBand: sailingBand) { [weak self] ok in
+            self?.log.log("apply(limit:\(limit) dischargeTo:\(dischargeTo) heat:\(heatLimitC) band:\(sailingBand)) -> \(ok)")
         }
     }
 
-    func clearLimit() {
+    func clearAll() {
         guard isRegistered else { return }
-        proxy({})?.clearLimit { [weak self] ok in
-            self?.log.log("clearLimit -> \(ok)")
+        proxy({})?.clearAll { [weak self] ok in
+            self?.log.log("clearAll -> \(ok)")
+        }
+    }
+
+    /// Closed-lid / clamshell Keep Awake via `pmset disablesleep`.
+    func setDisableSleep(_ disabled: Bool) {
+        if !isRegistered { register() }
+        proxy({})?.setDisableSleep(disabled) { [weak self] ok in
+            self?.log.log("setDisableSleep(\(disabled)) -> \(ok)")
         }
     }
 }

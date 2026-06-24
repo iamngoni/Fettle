@@ -1,1 +1,33 @@
+# Build artifacts
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+*.app
+*.dSYM/
+*.dSYM.zip
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.perspectivev3
+!default.perspectivev3
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# CocoaPods / Carthage (if ever used)
+Pods/
+Carthage/Build/
+
+# Logs & OS cruft
 *.log
+.DS_Store

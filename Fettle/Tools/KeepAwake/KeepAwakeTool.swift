@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 @Observable
@@ -45,12 +46,20 @@ final class KeepAwakeTool: FettleTool {
     var triggerWhileAppRunning = Store.bool("ka.trigApp", default: false) {
         didSet { Store.set(triggerWhileAppRunning, "ka.trigApp"); evaluate() }
     }
-    var triggerAppName = Store.string("ka.appName", default: "Final Cut Pro") {
+    var triggerAppName = Store.string("ka.appName", default: "") {
         didSet { Store.set(triggerAppName, "ka.appName") }
     }
-    var triggerAppBundleID = Store.string("ka.appBundle", default: "com.apple.FinalCut") {
+    var triggerAppBundleID = Store.string("ka.appBundle", default: "") {
         didSet { Store.set(triggerAppBundleID, "ka.appBundle") }
     }
+    var hasTriggerApp: Bool { !triggerAppBundleID.isEmpty }
+
+    /// Closed-lid (clamshell) mode — keeps the Mac awake with the lid shut, even
+    /// with no external display. Backed by `pmset disablesleep` via the helper.
+    var clamshellMode = Store.bool("ka.clamshell", default: false) {
+        didSet { Store.set(clamshellMode, "ka.clamshell"); applyClamshell() }
+    }
+    var helperInstalled: Bool { BatteryHelper.shared.isRegistered }
 
     // Runtime state
     private(set) var isActive = false
@@ -149,34 +158,78 @@ final class KeepAwakeTool: FettleTool {
     private func reassert() { if isActive { evaluate() } }
 
     private func isTriggerAppRunning() -> Bool {
-        NSWorkspace.shared.runningApplications.contains {
+        guard !triggerAppBundleID.isEmpty else { return false }
+        return NSWorkspace.shared.runningApplications.contains {
             $0.bundleIdentifier == triggerAppBundleID
         }
+    }
+
+    /// Lets the user pick which app should hold the Mac awake.
+    func chooseTriggerApp() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = "Choose"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        triggerAppBundleID = Bundle(url: url)?.bundleIdentifier ?? ""
+        triggerAppName = FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
+        evaluate()
+    }
+
+    func installHelper() { BatteryHelper.shared.register() }
+
+    // MARK: Clamshell (closed-lid) mode
+
+    private func applyClamshell() {
+        if clamshellMode {
+            if !helperInstalled { BatteryHelper.shared.register() }
+            startPollerIfNeeded()
+            pushClamshellState()
+        } else {
+            BatteryHelper.shared.setDisableSleep(false)
+            stopTimersIfIdle()
+        }
+    }
+
+    /// Only disables sleep while on AC power — running closed-lid on battery is
+    /// unsafe, so we revert automatically when unplugged (and re-apply on plug-in).
+    private func pushClamshellState() {
+        BatteryHelper.shared.setDisableSleep(clamshellMode && PowerSource.isOnACPower())
     }
 
     // MARK: Timers
 
     private func startTickerIfNeeded() {
         guard ticker == nil else { return }
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.tick &+= 1
                 if let end = self.endDate, Date() >= end { self.stop() }
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        ticker = timer
     }
 
     private func startPollerIfNeeded() {
-        guard poller == nil, triggerWhileOnPower || triggerWhileAppRunning else { return }
-        poller = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.evaluate() }
+        guard poller == nil, triggerWhileOnPower || triggerWhileAppRunning || clamshellMode else { return }
+        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.evaluate()
+                if self.clamshellMode { self.pushClamshellState() }
+            }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        poller = timer
     }
 
     private func stopTimersIfIdle() {
         if endDate == nil { ticker?.invalidate(); ticker = nil }
-        if !triggerWhileOnPower && !triggerWhileAppRunning {
+        if !triggerWhileOnPower && !triggerWhileAppRunning && !clamshellMode {
             poller?.invalidate(); poller = nil
         }
     }

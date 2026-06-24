@@ -353,6 +353,9 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fettle needs access to audio devices to mute your microphone and balance per-app volume.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fettle transcribes meeting audio on-device to generate notes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -400,6 +403,9 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fettle needs access to audio devices to mute your microphone and balance per-app volume.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fettle transcribes meeting audio on-device to generate notes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

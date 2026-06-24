@@ -1,29 +1,42 @@
 import SwiftUI
+import AppKit
 
 struct DashboardView: View {
     @Environment(AppState.self) private var app
+
+    /// Concrete height for the scrollable tool list. Fixed (not content-measured)
+    /// so it can never collapse; capped to the screen so the popover always fits.
+    private var listHeight: CGFloat {
+        let screen = NSScreen.main?.visibleFrame.height ?? 800
+        return min(560, screen - 150)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Hairline()
-            VStack(spacing: 15) {
-                ForEach(ToolSection.allCases) { section in
-                    let tools = app.tools(in: section)
-                    if !tools.isEmpty {
-                        VStack(spacing: 7) {
-                            SectionLabel(text: section.rawValue)
-                            Card {
-                                ForEach(Array(tools.enumerated()), id: \.element.id) { index, tool in
-                                    if index > 0 { Hairline() }
-                                    ToolRowView(tool: tool)
+            ScrollView {
+                VStack(spacing: 15) {
+                    ForEach(ToolSection.allCases) { section in
+                        let tools = app.tools(in: section)
+                        if !tools.isEmpty {
+                            VStack(spacing: 7) {
+                                SectionLabel(text: section.rawValue)
+                                Card {
+                                    ForEach(Array(tools.enumerated()), id: \.element.id) { index, tool in
+                                        if index > 0 { Hairline() }
+                                        ToolRowView(tool: tool)
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                .padding(.horizontal, 14).padding(.vertical, 14)
             }
-            .padding(.horizontal, 14).padding(.vertical, 14)
+            .frame(height: listHeight)
+            .scrollBounceBehavior(.basedOnSize)
+            Hairline()
             FooterBar()
         }
     }

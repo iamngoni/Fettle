@@ -26,6 +26,17 @@ struct RootView: View {
             case .audioMixer:   AudioMixerView(tool: app.audioMixer)
             case .presentation: PresentationDetailView(tool: app.presentation)
             case .battery:      BatteryDetailView(tool: app.battery)
+            case .captureText:  CaptureTextDetailView(tool: app.captureText)
+            case .devices:      DevicesDetailView(tool: app.devices)
+            case .meetings:     MeetingsDetailView(tool: app.meetings)
+            case .smartNotes:   SmartNotesDetailView(tool: app.smartNotes)
+            case .calculator:   CalculatorView(tool: app.calculator)
+            case .convert:      ConvertView(tool: app.convert)
+            case .compress:     CompressView(tool: app.compress)
+            case .windowSnap:   WindowSnapView(tool: app.windowSnap)
+            case .shortcuts:    ShortcutsView(tool: app.shortcuts)
+            case .measure:      MeasureView(tool: app.measure)
+            case .notch:        NotchDetailView(tool: app.notch)
             case .hideDesktop:  DashboardView()
             }
         }

@@ -178,13 +178,16 @@ struct SettingRow<Trailing: View>: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Color(hex: 0xE5E5EA))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let subtitle {
                     Text(subtitle).font(.system(size: 11.5)).foregroundStyle(subtitleTint)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 8)
             trailing
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        .padding(.horizontal, 14).padding(.vertical, 8)
     }
 }

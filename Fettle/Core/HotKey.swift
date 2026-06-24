@@ -28,7 +28,10 @@ final class HotKeyCenter {
         let hotKeyID = EventHotKeyID(signature: OSType(0x46544C45), id: id) // 'FTLE'
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &ref)
-        guard status == noErr, let ref else { return 0 }
+        guard status == noErr, let ref else {
+            FettleLog.error("Hotkey registration failed (keyCode=\(keyCode) mods=\(modifiers)) — likely already taken by another app")
+            return 0
+        }
         refs[id] = ref
         callbacks[id] = Callbacks(onPress: onPress, onRelease: onRelease)
         return id
