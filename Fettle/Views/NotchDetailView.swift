@@ -24,6 +24,10 @@ struct NotchDetailView: View {
                     VStack(spacing: 7) {
                         SectionLabel(text: "WIDGETS")
                         Card {
+                            SettingRow(title: "Now Playing", subtitle: "Media info & controls") {
+                                FSwitch(isOn: $tool.showNowPlaying, tint: green)
+                            }
+                            Hairline()
                             SettingRow(title: "Drag & drop shelf") { FSwitch(isOn: $tool.showShelf, tint: green) }
                             Hairline()
                             SettingRow(title: "Clock & battery") { FSwitch(isOn: $tool.showClock, tint: green) }

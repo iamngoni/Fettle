@@ -5,58 +5,111 @@ import IOKit.ps
 
 /// A borderless window pinned under the notch on the main screen. It shows a
 /// small bar that expands on hover into a drag-and-drop shelf plus clock/battery.
+/// Drives the notch panel's collapsed/expanded state. Driven by cursor polling
+/// in the controller (not SwiftUI hover) so resizing the window can't create a
+/// hover feedback loop.
+@MainActor
+@Observable
+final class NotchState {
+    var expanded = false
+}
+
 @MainActor
 final class NotchController {
     private weak var tool: NotchTool?
     private var window: NSWindow?
+    private let state = NotchState()
+    private var pollTimer: Timer?
 
     init(tool: NotchTool) { self.tool = tool }
 
+    // Collapsed window is a tiny trigger strip at the notch; expanded shows the
+    // panel. While collapsed the window is click-through so it never blocks the
+    // desktop.
+    private static let collapsedSize = CGSize(width: 220, height: 30)
+    private static let expandedSize = CGSize(width: 390, height: 212)
+
     func show() {
         guard window == nil, let tool, let screen = NSScreen.main else { return }
-        let width: CGFloat = 420, height: CGFloat = 220
-        let x = screen.frame.midX - width / 2
-        let y = screen.frame.maxY - height
-        let win = NSWindow(contentRect: NSRect(x: x, y: y, width: width, height: height),
+        // Fixed window at the expanded size; the panel animates *within* it (so the
+        // popout stays smooth). Click-through while collapsed; interactive while open.
+        let win = NSWindow(contentRect: Self.frameRect(for: Self.expandedSize, on: screen),
                            styleMask: [.borderless], backing: .buffered, defer: false)
         win.isOpaque = false
         win.backgroundColor = .clear
         win.level = .statusBar
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         win.hasShadow = false
-        win.ignoresMouseEvents = false
-        win.contentView = NSHostingView(rootView: NotchPanelView(tool: tool))
+        win.ignoresMouseEvents = true        // collapsed: clicks pass through entirely
+        win.contentView = NSHostingView(rootView: NotchPanelView(tool: tool, state: state))
         win.orderFrontRegardless()
         window = win
+        startPolling()
     }
 
     func hide() {
+        pollTimer?.invalidate(); pollTimer = nil
         window?.orderOut(nil)
         window = nil
+    }
+
+    private func startPolling() {
+        let timer = Timer(timeInterval: 0.12, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.poll() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pollTimer = timer
+    }
+
+    /// Expand when the cursor is in the trigger strip; collapse when it leaves the
+    /// expanded frame. Uses fixed screen rects + absolute cursor position, so the
+    /// window resizing can't feed back into the hit-testing.
+    private func poll() {
+        guard let window, let screen = NSScreen.main else { return }
+        let mouse = NSEvent.mouseLocation
+        if state.expanded {
+            if !window.frame.insetBy(dx: -6, dy: -6).contains(mouse) { setExpanded(false) }
+        } else {
+            if Self.frameRect(for: Self.collapsedSize, on: screen).contains(mouse) { setExpanded(true) }
+        }
+    }
+
+    private func setExpanded(_ expanded: Bool) {
+        guard let window, state.expanded != expanded else { return }
+        state.expanded = expanded
+        // Only toggle interactivity — the window frame stays fixed so the panel
+        // can spring open/closed smoothly inside it.
+        window.ignoresMouseEvents = !expanded
+    }
+
+    private static func frameRect(for size: CGSize, on screen: NSScreen) -> NSRect {
+        NSRect(x: screen.frame.midX - size.width / 2,
+               y: screen.frame.maxY - size.height,
+               width: size.width, height: size.height)
     }
 }
 
 struct NotchPanelView: View {
     @Bindable var tool: NotchTool
-    @State private var expanded = false
+    @Bindable var state: NotchState
     @State private var shelf: [URL] = []
     @State private var dropTargeted = false
 
+    private var expanded: Bool { state.expanded }
+
     var body: some View {
-        VStack(spacing: 0) {
-            panel
-                .onHover { hovering in
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) { expanded = hovering }
-                }
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
+        panel
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: state.expanded)
     }
 
     private var panel: some View {
         VStack(spacing: expanded ? 10 : 0) {
-            if expanded { infoRow }
-            if expanded && tool.showShelf { shelfRow }
+            if expanded {
+                infoRow
+                if tool.showNowPlaying, tool.nowPlaying.track != nil { nowPlayingRow }
+                if tool.showShelf { shelfRow }
+            }
         }
         .padding(.horizontal, expanded ? 14 : 0)
         .padding(.top, expanded ? 12 : 0)
@@ -74,6 +127,63 @@ struct NotchPanelView: View {
                                    style: .continuous)
                 .stroke(Color.white.opacity(dropTargeted ? 0.5 : 0.08), lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private var nowPlayingRow: some View {
+        if let track = tool.nowPlaying.track {
+            HStack(spacing: 10) {
+                artwork
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(track.title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+                    Text(track.artist).font(.system(size: 11)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                    progressBar(track)
+                }
+                transportControls(track)
+            }
+        }
+    }
+
+    private var artwork: some View {
+        Group {
+            if let image = tool.nowPlaying.artwork {
+                Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                LinearGradient(colors: [Color(hex: 0xFF6B8A), Color(hex: 0x5E5CE6)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .overlay(Image(systemName: "music.note").font(.system(size: 14)).foregroundStyle(.white.opacity(0.8)))
+            }
+        }
+        .frame(width: 40, height: 40)
+        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+
+    private func progressBar(_ track: NowPlayingModel.Track) -> some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+            let frac = track.duration > 0 ? track.liveElapsed(at: ctx.date) / track.duration : 0
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.18)).frame(height: 3)
+                    Capsule().fill(.white).frame(width: max(0, geo.size.width * frac), height: 3)
+                }
+            }
+            .frame(height: 3)
+        }
+        .frame(height: 3)
+    }
+
+    private func transportControls(_ track: NowPlayingModel.Track) -> some View {
+        HStack(spacing: 14) {
+            Button { tool.nowPlaying.previous() } label: {
+                Image(systemName: "backward.fill").font(.system(size: 13)).foregroundStyle(.white)
+            }.buttonStyle(.plain)
+            Button { tool.nowPlaying.togglePlayPause() } label: {
+                Image(systemName: track.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 16)).foregroundStyle(.white)
+            }.buttonStyle(.plain)
+            Button { tool.nowPlaying.next() } label: {
+                Image(systemName: "forward.fill").font(.system(size: 13)).foregroundStyle(.white)
+            }.buttonStyle(.plain)
+        }
     }
 
     private var infoRow: some View {

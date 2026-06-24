@@ -38,12 +38,15 @@ final class CompressTool: FettleTool {
     var replaceOriginals = Store.bool("comp.replace", default: false) {
         didSet { Store.set(replaceOriginals, "comp.replace") }
     }
+    var videoQuality = Store.rawValue("comp.vq", default: MediaConverter.VideoQuality.high) {
+        didSet { Store.set(videoQuality, "comp.vq") }
+    }
 
     private(set) var results: [CompressResult] = []
     private(set) var isWorking = false
 
     var isActive: Bool { false }
-    var statusText: String { "Shrink images on-device" }
+    var statusText: String { "Shrink images & videos on-device" }
     var statusTint: Color { Theme.textMuted }
     var control: ToolControl { .navigate }
     var hasDetail: Bool { true }
@@ -61,7 +64,7 @@ final class CompressTool: FettleTool {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.image]
+        panel.allowedContentTypes = [.image, .movie, .video, .audiovisualContent]
         guard panel.runModal() == .OK else { return }
         let urls = panel.urls
         results.removeAll()
@@ -74,14 +77,21 @@ final class CompressTool: FettleTool {
 
     private func compress(_ url: URL) async {
         let before = MediaConverter.fileSize(url)
-        let type = UTType(filenameExtension: url.pathExtension) ?? .png
-        let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
+        let type = UTType(filenameExtension: url.pathExtension)
+        let isVideo = type?.conforms(to: .movie) == true || type?.conforms(to: .audiovisualContent) == true
         do {
-            let out = try MediaConverter.convertImage(
-                url, to: type, ext: ext,
-                quality: quality,
-                maxDimension: resizeEnabled ? Int(maxDimension) : 0,
-                preserveMetadata: !stripMetadata)
+            let out: URL
+            if isVideo {
+                out = try await MediaConverter.compressVideo(url, quality: videoQuality)
+            } else {
+                let imgType = type ?? .png
+                let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
+                out = try MediaConverter.convertImage(
+                    url, to: imgType, ext: ext,
+                    quality: quality,
+                    maxDimension: resizeEnabled ? Int(maxDimension) : 0,
+                    preserveMetadata: !stripMetadata)
+            }
             var after = MediaConverter.fileSize(out)
             var finalName = out.lastPathComponent
             if replaceOriginals {

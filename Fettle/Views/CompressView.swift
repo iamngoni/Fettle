@@ -18,6 +18,7 @@ struct CompressView: View {
                     chooseButton
                     if !tool.results.isEmpty { savedHero; filesList }
                     settings
+                    videoSection
                     note
                 }
                 .padding(16)
@@ -30,7 +31,7 @@ struct CompressView: View {
             HStack(spacing: 10) {
                 if tool.isWorking { ProgressView().controlSize(.small) }
                 else { Image(systemName: "photo.badge.arrow.down").font(.system(size: 16, weight: .semibold)) }
-                Text(tool.isWorking ? "Compressing…" : "Choose images").font(.system(size: 13.5, weight: .bold))
+                Text(tool.isWorking ? "Compressing…" : "Choose images or videos").font(.system(size: 13.5, weight: .bold))
             }
             .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 46)
             .background(RoundedRectangle(cornerRadius: 11).fill(green))
@@ -46,7 +47,7 @@ struct CompressView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Saved \(MediaConverter.humanSize(tool.totalSaved))")
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.textPrimary)
-                Text("\(tool.averageSaved)% smaller across \(tool.results.filter { !$0.failed }.count) images")
+                Text("\(tool.averageSaved)% smaller across \(tool.results.filter { !$0.failed }.count) files")
                     .font(.system(size: 11.5)).foregroundStyle(Color(hex: 0x9ED9AC))
             }
             Spacer(minLength: 0)
@@ -115,6 +116,30 @@ struct CompressView: View {
                 SettingRow(title: "Strip metadata") { FSwitch(isOn: $tool.stripMetadata, tint: green) }
                 Hairline()
                 SettingRow(title: "Replace originals") { FSwitch(isOn: $tool.replaceOriginals, tint: green) }
+            }
+        }
+    }
+
+    private var videoSection: some View {
+        VStack(spacing: 7) {
+            SectionLabel(text: "VIDEO QUALITY")
+            Card {
+                ForEach(Array(MediaConverter.VideoQuality.allCases.enumerated()), id: \.element) { i, q in
+                    if i > 0 { Hairline() }
+                    Button { tool.videoQuality = q } label: {
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(q.rawValue).font(.system(size: 13, weight: .medium)).foregroundStyle(Color(hex: 0xE5E5EA))
+                                Text(q.subtitle).font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+                            }
+                            Spacer(minLength: 8)
+                            if tool.videoQuality == q {
+                                Image(systemName: "checkmark.circle.fill").font(.system(size: 16)).foregroundStyle(green)
+                            }
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 8).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                }
             }
         }
     }
