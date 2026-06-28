@@ -9,7 +9,7 @@ export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
 
 echo "▸ Building Fettle (Release)…"
 xcodebuild -project Fettle.xcodeproj -scheme Fettle -configuration Release \
-  -derivedDataPath build -quiet CODE_SIGNING_ALLOWED=YES build
+  -derivedDataPath build -skipMacroValidation -quiet CODE_SIGNING_ALLOWED=YES build
 
 APP="$ROOT/build/Build/Products/Release/Fettle.app"
 [ -d "$APP" ] || { echo "✗ Build product missing: $APP"; exit 1; }

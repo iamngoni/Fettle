@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CompressView: View {
     @Bindable var tool: CompressTool
     @Environment(AppState.self) private var app
+    @State private var dropTargeted = false
 
     private let green = Color(hex: 0x30D158)
 
@@ -15,8 +17,10 @@ struct CompressView: View {
             PanelHeader(title: "Compress", pill: nil) { app.route = .dashboard }
             Group {
                 VStack(spacing: 10) {
-                    chooseButton
-                    if !tool.results.isEmpty { savedHero; filesList }
+                    dropzone
+                    if !tool.picked.isEmpty { selectedList }
+                    if tool.isWorking { progressView } else if !tool.picked.isEmpty { compressButton }
+                    if !tool.results.isEmpty { savedHero; resultsList }
                     settings
                     videoSection
                     note
@@ -26,16 +30,79 @@ struct CompressView: View {
         }
     }
 
-    private var chooseButton: some View {
-        Button { tool.pickAndCompress() } label: {
-            HStack(spacing: 10) {
-                if tool.isWorking { ProgressView().controlSize(.small) }
-                else { Image(systemName: "photo.badge.arrow.down").font(.system(size: 16, weight: .semibold)) }
-                Text(tool.isWorking ? "Compressing…" : "Choose images or videos").font(.system(size: 13.5, weight: .bold))
+    private var dropzone: some View {
+        VStack(spacing: 7) {
+            Image(systemName: "photo.badge.arrow.down").font(.system(size: 22)).foregroundStyle(green)
+            Text("Drop images or videos").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color(hex: 0xE5E5EA))
+            Text("or click to choose").font(.system(size: 11)).foregroundStyle(Theme.textMuted)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 20)
+        .background(RoundedRectangle(cornerRadius: 12).fill(green.opacity(0.08)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
+                .foregroundStyle(green.opacity(dropTargeted ? 0.7 : 0.3)))
+        .contentShape(Rectangle())
+        .onTapGesture { tool.pickFiles() }
+        .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
+            for provider in providers {
+                _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                    if let url { DispatchQueue.main.async { tool.addFiles([url]) } }
+                }
+            }
+            return true
+        }
+    }
+
+    private var selectedList: some View {
+        VStack(spacing: 7) {
+            HStack {
+                SectionLabel(text: "SELECTED · \(tool.picked.count)")
+                Spacer()
+                Button("Clear") { tool.clearPicked() }
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.textTertiary).buttonStyle(.plain)
+            }
+            Card {
+                ForEach(Array(tool.picked.enumerated()), id: \.element.id) { index, file in
+                    if index > 0 { Hairline() }
+                    HStack(spacing: 10) {
+                        Image(systemName: file.isVideo ? "film" : "photo")
+                            .font(.system(size: 14)).foregroundStyle(Theme.textSecondary).frame(width: 20)
+                        Text(file.name).font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xD7D7DC)).lineLimit(1)
+                        Spacer(minLength: 8)
+                        Button { tool.removePicked(file) } label: {
+                            Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(Color(hex: 0x6E6E78))
+                        }.buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                }
+            }
+        }
+    }
+
+    private var compressButton: some View {
+        Button { tool.startCompression() } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.right.and.arrow.up.left").font(.system(size: 15, weight: .semibold))
+                Text("Compress \(tool.picked.count) file\(tool.picked.count == 1 ? "" : "s")").font(.system(size: 13.5, weight: .bold))
             }
             .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 46)
             .background(RoundedRectangle(cornerRadius: 11).fill(green))
-        }.buttonStyle(.plain).disabled(tool.isWorking)
+        }.buttonStyle(.plain)
+    }
+
+    private var progressView: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text(tool.currentName.isEmpty ? "Preparing…" : tool.currentName)
+                    .font(.system(size: 12)).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                Spacer(minLength: 8)
+                Text("\(Int(tool.overallProgress * 100))%").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.textPrimary)
+            }
+            ProgressView(value: tool.overallProgress).tint(green)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous).fill(Theme.card))
     }
 
     private var savedHero: some View {
@@ -57,16 +124,15 @@ struct CompressView: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous).stroke(green.opacity(0.2), lineWidth: 1))
     }
 
-    private var filesList: some View {
+    private var resultsList: some View {
         VStack(spacing: 7) {
-            SectionLabel(text: "FILES")
+            SectionLabel(text: "RESULTS")
             Card {
                 ForEach(Array(tool.results.enumerated()), id: \.element.id) { index, r in
                     if index > 0 { Hairline() }
                     HStack(spacing: 10) {
-                        Image(systemName: r.failed ? "xmark.circle.fill" : "photo")
-                            .font(.system(size: 14)).foregroundStyle(r.failed ? Theme.red : Theme.textSecondary)
-                            .frame(width: 22)
+                        Image(systemName: r.failed ? "xmark.circle.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 14)).foregroundStyle(r.failed ? Theme.red : green).frame(width: 20)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(r.name).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.textPrimary).lineLimit(1)
                             Text(r.failed ? "Couldn’t compress"
@@ -89,7 +155,7 @@ struct CompressView: View {
 
     private var settings: some View {
         VStack(spacing: 7) {
-            SectionLabel(text: "SETTINGS")
+            SectionLabel(text: "IMAGE SETTINGS")
             Card {
                 VStack(spacing: 9) {
                     HStack {

@@ -25,6 +25,21 @@ final class NotchTool: FettleTool {
     var showNowPlaying = Store.bool("notch.nowplaying", default: true) {
         didSet { Store.set(showNowPlaying, "notch.nowplaying") }
     }
+    var showDevices = Store.bool("notch.devices", default: true) {
+        didSet { Store.set(showDevices, "notch.devices") }
+    }
+    var showMeetings = Store.bool("notch.meetings", default: true) {
+        didSet { Store.set(showMeetings, "notch.meetings") }
+    }
+    var showQuickActions = Store.bool("notch.quickActions", default: true) {
+        didSet { Store.set(showQuickActions, "notch.quickActions") }
+    }
+    var maxItems = min(3, max(1, Store.int("notch.maxItems", default: 3))) {
+        didSet {
+            maxItems = min(3, max(1, maxItems))
+            Store.set(maxItems, "notch.maxItems")
+        }
+    }
 
     let nowPlaying = NowPlayingModel()
     @ObservationIgnored private lazy var controller = NotchController(tool: self)

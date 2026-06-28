@@ -9,6 +9,13 @@
 /* Begin PBXBuildFile section */
 		000000000000000400000000 /* FettleBatteryHelper in Embed Battery Helper */ = {isa = PBXBuildFile; fileRef = 000000000000000000000220 /* FettleBatteryHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		000000000000000410000000 /* com.fettle.FettleBatteryHelper.plist in Embed Daemon Plist */ = {isa = PBXBuildFile; fileRef = 000000000000000000000221 /* com.fettle.FettleBatteryHelper.plist */; };
+		FFFFFFFFFFFFFFFF00000003 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000002 /* WhisperKit */; };
+		FFFFFFFFFFFFFFFF00000013 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000011 /* MLXLLM */; };
+		FFFFFFFFFFFFFFFF00000014 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000012 /* MLXLMCommon */; };
+		FFFFFFFFFFFFFFFF00000016 /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000015 /* MLXVLM */; };
+		FFFFFFFFFFFFFFFF00000026 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000023 /* MLXHuggingFace */; };
+		FFFFFFFFFFFFFFFF00000024 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000021 /* Tokenizers */; };
+		FFFFFFFFFFFFFFFF00000032 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = FFFFFFFFFFFFFFFF00000031 /* HuggingFace */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +72,13 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				FFFFFFFFFFFFFFFF00000003 /* WhisperKit in Frameworks */,
+				FFFFFFFFFFFFFFFF00000013 /* MLXLLM in Frameworks */,
+				FFFFFFFFFFFFFFFF00000014 /* MLXLMCommon in Frameworks */,
+				FFFFFFFFFFFFFFFF00000016 /* MLXVLM in Frameworks */,
+				FFFFFFFFFFFFFFFF00000026 /* MLXHuggingFace in Frameworks */,
+				FFFFFFFFFFFFFFFF00000024 /* Tokenizers in Frameworks */,
+				FFFFFFFFFFFFFFFF00000032 /* HuggingFace in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -119,6 +133,15 @@
 				000000000000000000000010 /* Fettle */,
 			);
 			name = Fettle;
+			packageProductDependencies = (
+				FFFFFFFFFFFFFFFF00000002 /* WhisperKit */,
+				FFFFFFFFFFFFFFFF00000011 /* MLXLLM */,
+				FFFFFFFFFFFFFFFF00000012 /* MLXLMCommon */,
+				FFFFFFFFFFFFFFFF00000015 /* MLXVLM */,
+				FFFFFFFFFFFFFFFF00000023 /* MLXHuggingFace */,
+				FFFFFFFFFFFFFFFF00000021 /* Tokenizers */,
+				FFFFFFFFFFFFFFFF00000031 /* HuggingFace */,
+			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Fettle.app */;
 			productType = "com.apple.product-type.application";
@@ -163,6 +186,12 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FFFFFFFFFFFFFFFF00000001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
+				FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				FFFFFFFFFFFFFFFF00000020 /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				FFFFFFFFFFFFFFFF00000030 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
+			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -173,6 +202,79 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FFFFFFFFFFFFFFFF00000001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		FFFFFFFFFFFFFFFF00000020 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		FFFFFFFFFFFFFFFF00000030 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FFFFFFFFFFFFFFFF00000002 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000001 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+		FFFFFFFFFFFFFFFF00000011 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		FFFFFFFFFFFFFFFF00000012 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		FFFFFFFFFFFFFFFF00000015 /* MLXVLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXVLM;
+		};
+		FFFFFFFFFFFFFFFF00000023 /* MLXHuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000010 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXHuggingFace;
+		};
+		FFFFFFFFFFFFFFFF00000021 /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000020 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
+		};
+		FFFFFFFFFFFFFFFF00000031 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFFFFFFFFFFFFFFF00000030 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		000000000000000140000000 /* Resources */ = {
@@ -349,23 +451,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fettle needs access to audio devices to mute your microphone and balance per-app volume.";
-				INFOPLIST_KEY_NSCalendarsUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fettle transcribes meeting audio on-device to generate notes.";
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Fettle-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
@@ -399,23 +486,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fettle needs access to audio devices to mute your microphone and balance per-app volume.";
-				INFOPLIST_KEY_NSCalendarsUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Fettle reads your calendar to alert you before meetings begin.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fettle transcribes meeting audio on-device to generate notes.";
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
-				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
-				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Fettle-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;

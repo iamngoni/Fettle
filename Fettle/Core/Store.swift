@@ -12,6 +12,9 @@ enum Store {
     static func double(_ key: String, default def: Double) -> Double {
         defaults.object(forKey: key) as? Double ?? def
     }
+    static func int(_ key: String, default def: Int) -> Int {
+        defaults.object(forKey: key) as? Int ?? def
+    }
     static func string(_ key: String, default def: String) -> String {
         defaults.string(forKey: key) ?? def
     }
@@ -24,6 +27,7 @@ enum Store {
 
     static func set(_ value: Bool, _ key: String) { defaults.set(value, forKey: key) }
     static func set(_ value: Double, _ key: String) { defaults.set(value, forKey: key) }
+    static func set(_ value: Int, _ key: String) { defaults.set(value, forKey: key) }
     static func set(_ value: String, _ key: String) { defaults.set(value, forKey: key) }
     static func set<T: RawRepresentable>(_ value: T, _ key: String) where T.RawValue == String {
         defaults.set(value.rawValue, forKey: key)

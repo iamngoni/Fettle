@@ -4,7 +4,7 @@ import NaturalLanguage
 import FoundationModels
 #endif
 
-struct MeetingSummary {
+struct MeetingSummary: Codable, Equatable {
     var summary: String
     var actionItems: [String]
     var engine: String
@@ -15,10 +15,41 @@ struct MeetingSummary {
 /// summary so notes always work offline.
 enum MeetingSummarizer {
 
-    static func summarize(transcript: String) async -> MeetingSummary {
+    enum Engine: String, CaseIterable, Codable {
+        case appleIntelligence = "Apple Intelligence"
+        case gemmaE4B = "Gemma 4 E4B"
+        case gemmaE2B = "Gemma 4 E2B"
+
+        var mlxVariant: MLXSummarizer.Variant? {
+            switch self {
+            case .appleIntelligence: return nil
+            case .gemmaE4B: return .e4b
+            case .gemmaE2B: return .e2b
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .appleIntelligence: return "On-device · Foundation Models"
+            case .gemmaE4B: return "Local · MLX · gemma 4 e4b"
+            case .gemmaE2B: return "Local · MLX · gemma 4 e2b (lighter)"
+            }
+        }
+    }
+
+    static let instructions = "You are a meeting-notes assistant. Produce clear, well-structured GitHub-flavored Markdown. Be concise and faithful to the transcript — never invent details."
+
+    static func summarize(transcript: String, engine: Engine) async -> MeetingSummary {
         let clean = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else {
             return MeetingSummary(summary: "No speech was recognized in this recording.", actionItems: [], engine: "—")
+        }
+
+        if let variant = engine.mlxVariant {
+            if await MLXSummarizer.shared.isReady,
+               let text = await MLXSummarizer.shared.generate(prompt: summaryPrompt(clean), instructions: instructions) {
+                return MeetingSummary(summary: text.trimmingCharacters(in: .whitespacesAndNewlines), actionItems: [], engine: engine.rawValue)
+            }
+            FettleLog.error("MLX \(variant.modelID) not ready — falling back to Apple Intelligence/on-device")
         }
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *), let ai = await foundationModels(clean) {
@@ -28,22 +59,36 @@ enum MeetingSummarizer {
         return extractive(clean)
     }
 
+    /// Markdown-producing prompt used by both MLX (Gemma) and Apple Intelligence.
+    static func summaryPrompt(_ transcript: String) -> String {
+        """
+        Summarize the following meeting transcript as clean Markdown with these sections:
+
+        ## Summary
+        A 2–3 sentence overview.
+
+        ## Key Points
+        Bullet points of the main topics and decisions.
+
+        ## Action Items
+        Bullet points of concrete follow-ups (owner if mentioned). Omit this section if none were discussed.
+
+        Only use what is in the transcript.
+
+        Transcript:
+        \(transcript.prefix(8000))
+        """
+    }
+
     #if canImport(FoundationModels)
     @available(macOS 26.0, *)
     private static func foundationModels(_ transcript: String) async -> MeetingSummary? {
         guard SystemLanguageModel.default.availability == .available else { return nil }
         do {
-            let session = LanguageModelSession()
-            let prompt = """
-            You are summarizing a meeting transcript. Write a concise 2–3 sentence summary, \
-            then a line that says "ACTIONS:" followed by each action item on its own line \
-            prefixed with "- ". Only include action items that were actually discussed.
-
-            Transcript:
-            \(transcript.prefix(6000))
-            """
-            let response = try await session.respond(to: prompt)
-            return parse(response.content, engine: "Apple Intelligence")
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(to: summaryPrompt(transcript))
+            return MeetingSummary(summary: response.content.trimmingCharacters(in: .whitespacesAndNewlines),
+                                  actionItems: [], engine: "Apple Intelligence")
         } catch {
             return nil
         }

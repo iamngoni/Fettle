@@ -25,6 +25,9 @@ final class MeetingRecorder: NSObject, @unchecked Sendable {
     private var ioProcID: AudioDeviceIOProcID?
     private var systemFile: AVAudioFile?
     private var tapFormat = AudioStreamBasicDescription()
+    private var tapAVFormat: AVAudioFormat?
+    private var sysCallbacks = 0
+    private var sysFramesTotal = 0
     private let ioQueue = DispatchQueue(label: "com.fettle.notes.io", qos: .userInitiated)
 
     // Mic
@@ -61,6 +64,10 @@ final class MeetingRecorder: NSObject, @unchecked Sendable {
         if tapID != 0 { AudioHardwareDestroyProcessTap(tapID); tapID = 0 }
         micFile = nil
         systemFile = nil
+
+        let sysSize = (try? FileManager.default.attributesOfItem(atPath: systemURL.path)[.size] as? Int) ?? nil
+        let micSize = (try? FileManager.default.attributesOfItem(atPath: micURL.path)[.size] as? Int) ?? nil
+        FettleLog.log("Recorder stop: dur=\(Int(duration))s systemBytes=\(sysSize ?? -1) micBytes=\(micSize ?? -1) sysCallbacks=\(sysCallbacks) sysFrames=\(sysFramesTotal) tapRate=\(Int(tapFormat.mSampleRate)) tapCh=\(tapFormat.mChannelsPerFrame)")
 
         return Output(
             systemURL: FileManager.default.fileExists(atPath: systemURL.path) ? systemURL : nil,
@@ -103,9 +110,23 @@ final class MeetingRecorder: NSObject, @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain)
         AudioObjectGetPropertyData(tapID, &fmtAddr, 0, nil, &fmtSize, &tapFormat)
+        var fileFormatDescription = tapFormat
+        guard let format = AVAudioFormat(streamDescription: &fileFormatDescription) else {
+            throw NSError(domain: "Fettle", code: 14, userInfo: [NSLocalizedDescriptionKey: "Couldn’t read the system-audio format."])
+        }
+        tapAVFormat = format
+        systemFile = try AVAudioFile(
+            forWriting: systemURL,
+            settings: [
+                AVFormatIDKey: tapFormat.mFormatID,
+                AVSampleRateKey: format.sampleRate,
+                AVNumberOfChannelsKey: format.channelCount,
+            ],
+            commonFormat: .pcmFormatFloat32,
+            interleaved: format.isInterleaved)
 
         let tapUID = description.uuid.uuidString
-        let dict: [String: Any] = [
+        var dict: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Fettle Notes Capture",
             kAudioAggregateDeviceUIDKey: "com.fettle.notes.\(tapUID)",
             kAudioAggregateDeviceIsPrivateKey: true,
@@ -115,6 +136,12 @@ final class MeetingRecorder: NSObject, @unchecked Sendable {
             ]],
             kAudioAggregateDeviceTapAutoStartKey: true,
         ]
+        // Anchor the aggregate to the real output device so it has a clock to
+        // drive the IOProc — without this the tap-only aggregate delivers no audio.
+        if let outputUID = Self.defaultOutputDeviceUID() {
+            dict[kAudioAggregateDeviceMainSubDeviceKey] = outputUID
+            dict[kAudioAggregateDeviceSubDeviceListKey] = [[kAudioSubDeviceUIDKey: outputUID]]
+        }
         var aggregate = AudioObjectID(0)
         guard AudioHardwareCreateAggregateDevice(dict as CFDictionary, &aggregate) == noErr else {
             throw NSError(domain: "Fettle", code: 11, userInfo: [NSLocalizedDescriptionKey: "Couldn’t create the capture device."])
@@ -142,26 +169,38 @@ final class MeetingRecorder: NSObject, @unchecked Sendable {
         engine.stop()
     }
 
+    /// UID of the current default output device, used to anchor the capture aggregate.
+    private static func defaultOutputDeviceUID() -> String? {
+        var deviceID = AudioObjectID(0)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultSystemOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &deviceID) == noErr,
+              deviceID != 0 else { return nil }
+
+        var uid: CFString = "" as CFString
+        var uidSize = UInt32(MemoryLayout<CFString>.size)
+        var uidAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(deviceID, &uidAddr, 0, nil, &uidSize, &uid) == noErr else { return nil }
+        return uid as String
+    }
+
     private func writeSystem(_ inInputData: UnsafePointer<AudioBufferList>) {
-        let abl = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inInputData))
-        guard let first = abl.first, first.mDataByteSize > 0, tapFormat.mBytesPerFrame > 0 else { return }
-
-        if systemFile == nil {
-            var fmt = tapFormat
-            guard let format = AVAudioFormat(streamDescription: &fmt) else { return }
-            systemFile = try? AVAudioFile(forWriting: systemURL, settings: format.settings)
+        sysCallbacks += 1
+        guard let systemFile, let format = tapAVFormat,
+              let pcm = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: inInputData, deallocator: nil),
+              pcm.frameLength > 0
+        else { return }
+        sysFramesTotal += Int(pcm.frameLength)
+        do {
+            try systemFile.write(from: pcm)
+        } catch {
+            recLog.error("System audio write failed: \(error.localizedDescription, privacy: .public)")
         }
-        guard let systemFile,
-              let format = AVAudioFormat(streamDescription: &tapFormat) else { return }
-
-        let frames = first.mDataByteSize / tapFormat.mBytesPerFrame
-        guard frames > 0, let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else { return }
-        pcm.frameLength = frames
-        let dst = UnsafeMutableAudioBufferListPointer(pcm.mutableAudioBufferList)
-        for i in 0..<min(abl.count, dst.count) {
-            let n = min(abl[i].mDataByteSize, dst[i].mDataByteSize)
-            if let s = abl[i].mData, let d = dst[i].mData { memcpy(d, s, Int(n)) }
-        }
-        try? systemFile.write(from: pcm)
     }
 }

@@ -12,6 +12,8 @@ enum Route: Hashable {
 @MainActor
 @Observable
 final class AppState {
+    static let shared = AppState()
+
     let keepAwake = KeepAwakeTool()
     let cleanMode = CleanModeTool()
     let micMute = MicMuteTool()
@@ -30,6 +32,7 @@ final class AppState {
     let shortcuts = ShortcutsTool()
     let measure = MeasureTool()
     let notch = NotchTool()
+    let license = LicenseManager()
 
     var route: Route = .dashboard
     var launchAtLogin: Bool {

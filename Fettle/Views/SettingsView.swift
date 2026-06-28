@@ -21,6 +21,9 @@ struct SettingsView: View {
                     }
                 }
 
+                SectionLabel(text: "LICENSE")
+                licenseCard
+
                 SectionLabel(text: "SHORTCUTS")
                 Card {
                     SettingRow(title: "Toggle mute") { KbdChip(text: "⌥ ⌘ M") }
@@ -72,5 +75,105 @@ struct SettingsView: View {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(v) (\(b))"
+    }
+
+    private var licenseCard: some View {
+        Card {
+            SettingRow(title: "Fettle lifetime",
+                       subtitle: "$3 once · one active Mac at a time",
+                       subtitleTint: app.license.isActivated ? Theme.greenLight : Theme.textMuted) {
+                if app.license.isActivated {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.green)
+                } else {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.accentLight)
+                }
+            }
+            Hairline()
+            if app.license.isActivated {
+                activatedLicenseRows
+            } else {
+                activationRows
+            }
+            Hairline()
+            HStack(spacing: 8) {
+                Image(systemName: app.license.isWorking ? "arrow.triangle.2.circlepath" : "info.circle")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(app.license.statusColor)
+                Text(app.license.statusMessage)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(app.license.statusColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+        }
+    }
+
+    private var activationRows: some View {
+        VStack(spacing: 9) {
+            TextField("License key", text: Binding(
+                get: { app.license.licenseKeyInput },
+                set: { app.license.licenseKeyInput = $0 }
+            ))
+            .textFieldStyle(.plain)
+            .font(.system(size: 12.5, weight: .medium, design: .monospaced))
+            .foregroundStyle(Theme.textPrimary)
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.06)))
+
+            Button {
+                app.license.activate()
+            } label: {
+                HStack(spacing: 7) {
+                    if app.license.isWorking {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "key.radiowaves.forward.fill")
+                    }
+                    Text("Activate")
+                }
+                .font(.system(size: 12.5, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 34)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
+            .disabled(app.license.isWorking)
+        }
+        .padding(14)
+    }
+
+    private var activatedLicenseRows: some View {
+        VStack(spacing: 0) {
+            SettingRow(title: "License key",
+                       subtitle: app.license.activationUsage ?? "Seat active",
+                       subtitleTint: Theme.textMuted) {
+                Text(app.license.displayKeyTail)
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Hairline()
+            HStack(spacing: 8) {
+                Button("Validate") { app.license.validate() }
+                    .font(.system(size: 12, weight: .semibold))
+                    .buttonStyle(.bordered)
+                    .disabled(app.license.isWorking)
+                Button("Release seat") { app.license.deactivate() }
+                    .font(.system(size: 12, weight: .semibold))
+                    .buttonStyle(.bordered)
+                    .tint(Theme.red)
+                    .disabled(app.license.isWorking)
+                Spacer(minLength: 0)
+                if app.license.isWorking { ProgressView().controlSize(.small) }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+        }
     }
 }

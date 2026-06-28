@@ -38,7 +38,9 @@ final class WindowSnapTool: FettleTool {
 
     func apply(_ zone: WindowManager.Zone) {
         if !trusted { WindowManager.requestAccess(); return }
-        WindowManager.apply(zone, gap: CGFloat(gap))
+        if let frame = WindowManager.apply(zone, gap: CGFloat(gap)) {
+            SnapFlash.flash(frame)
+        }
     }
 
     func requestAccess() { WindowManager.requestAccess() }

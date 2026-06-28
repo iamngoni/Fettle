@@ -21,20 +21,23 @@ enum WindowManager {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    static func apply(_ zone: Zone, gap: CGFloat = 0) {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return }
+    /// Returns the snapped frame (AppKit coords) on success, for the snap-flash.
+    @discardableResult
+    static func apply(_ zone: Zone, gap: CGFloat = 0) -> NSRect? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focused) == .success,
               let windowRef = focused,
-              CFGetTypeID(windowRef) == AXUIElementGetTypeID() else { return }
+              CFGetTypeID(windowRef) == AXUIElementGetTypeID() else { return nil }
         let window = windowRef as! AXUIElement
 
         let screen = screenForWindow(window) ?? NSScreen.main
-        guard let visible = screen?.visibleFrame else { return }
+        guard let visible = screen?.visibleFrame else { return nil }
         let target = frame(for: zone, in: visible.insetBy(dx: gap, dy: gap))
 
         setFrame(window, target)
+        return target
     }
 
     // MARK: Zone math (AppKit bottom-left coordinates)

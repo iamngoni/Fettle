@@ -13,15 +13,17 @@ final class DevicesTool: FettleTool {
     private(set) var peripherals: [BatteryDevice] = []
 
     private var timer: Timer?
+    private var isRefreshing = false
+    private var refreshAgain = false
 
     var isActive: Bool { false }
     var statusText: String {
         let count = peripherals.count
-        return count == 0 ? "No accessories found" : "\(count) connected"
+        return count == 0 ? "No devices found" : "\(count) devices"
     }
     var statusTint: Color { Theme.textMuted }
     var control: ToolControl {
-        if let mac { return .value("\(mac.percent)%") }
+        if let percent = mac?.percent { return .value("\(percent)%") }
         return .navigate
     }
     var hasDetail: Bool { true }
@@ -29,9 +31,21 @@ final class DevicesTool: FettleTool {
     init() { refresh() }
 
     func refresh() {
-        let result = DeviceScanner.scan()
-        mac = result.mac
-        peripherals = result.peripherals
+        guard !isRefreshing else {
+            refreshAgain = true
+            return
+        }
+        isRefreshing = true
+        Task { @MainActor in
+            let result = await DeviceScanner.scan()
+            self.mac = result.mac
+            self.peripherals = result.peripherals
+            self.isRefreshing = false
+            if self.refreshAgain {
+                self.refreshAgain = false
+                self.refresh()
+            }
+        }
     }
 
     func startAutoRefresh() {

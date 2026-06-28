@@ -21,7 +21,7 @@ enum Theme {
     static let red = Color(hex: 0xFF453A)
     static let redLight = Color(hex: 0xFF6B61)
 
-    static let panelWidth: CGFloat = 320
+    static let panelWidth: CGFloat = 360
     static let corner: CGFloat = 12
 
     static let accentGradient = LinearGradient(

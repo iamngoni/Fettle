@@ -14,6 +14,16 @@ struct CompressResult: Identifiable {
     }
 }
 
+struct PickedFile: Identifiable, Equatable {
+    let id = UUID()
+    let url: URL
+    var name: String { url.lastPathComponent }
+    var isVideo: Bool {
+        let t = UTType(filenameExtension: url.pathExtension)
+        return t?.conforms(to: .movie) == true || t?.conforms(to: .audiovisualContent) == true
+    }
+}
+
 @MainActor
 @Observable
 final class CompressTool: FettleTool {
@@ -42,8 +52,12 @@ final class CompressTool: FettleTool {
         didSet { Store.set(videoQuality, "comp.vq") }
     }
 
+    // Selection (separate from running) so the user configures, then compresses.
+    private(set) var picked: [PickedFile] = []
     private(set) var results: [CompressResult] = []
     private(set) var isWorking = false
+    private(set) var overallProgress: Double = 0
+    private(set) var currentName: String = ""
 
     var isActive: Bool { false }
     var statusText: String { "Shrink images & videos on-device" }
@@ -60,30 +74,61 @@ final class CompressTool: FettleTool {
         return valid.reduce(0) { $0 + $1.savedPercent } / valid.count
     }
 
-    func pickAndCompress() {
+    // MARK: Selection
+
+    func pickFiles() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.image, .movie, .video, .audiovisualContent]
         guard panel.runModal() == .OK else { return }
-        let urls = panel.urls
+        addFiles(panel.urls)
+    }
+
+    func addFiles(_ urls: [URL]) {
+        for url in urls where !picked.contains(where: { $0.url == url }) {
+            picked.append(PickedFile(url: url))
+        }
+        results.removeAll()
+    }
+
+    func removePicked(_ file: PickedFile) { picked.removeAll { $0.id == file.id } }
+    func clearPicked() { picked.removeAll(); results.removeAll() }
+
+    // MARK: Run
+
+    func startCompression() {
+        guard !picked.isEmpty, !isWorking else { return }
+        let files = picked
         results.removeAll()
         isWorking = true
+        overallProgress = 0
         Task {
-            for url in urls { await compress(url) }
+            for (index, file) in files.enumerated() {
+                currentName = file.name
+                await compress(file.url) { [weak self] frac in
+                    self?.overallProgress = (Double(index) + frac) / Double(files.count)
+                }
+                overallProgress = Double(index + 1) / Double(files.count)
+            }
             isWorking = false
+            currentName = ""
+            picked.removeAll()
         }
     }
 
-    private func compress(_ url: URL) async {
+    private func compress(_ url: URL, onProgress: @escaping @MainActor (Double) -> Void) async {
         let before = MediaConverter.fileSize(url)
         let type = UTType(filenameExtension: url.pathExtension)
         let isVideo = type?.conforms(to: .movie) == true || type?.conforms(to: .audiovisualContent) == true
         do {
             let out: URL
             if isVideo {
-                out = try await MediaConverter.compressVideo(url, quality: videoQuality)
+                out = try await MediaConverter.compressVideo(url, quality: videoQuality) { frac in
+                    Task { @MainActor in onProgress(frac) }
+                }
             } else {
+                onProgress(0.4)
                 let imgType = type ?? .png
                 let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
                 out = try MediaConverter.convertImage(
@@ -91,11 +136,11 @@ final class CompressTool: FettleTool {
                     quality: quality,
                     maxDimension: resizeEnabled ? Int(maxDimension) : 0,
                     preserveMetadata: !stripMetadata)
+                onProgress(1.0)
             }
             var after = MediaConverter.fileSize(out)
             var finalName = out.lastPathComponent
             if replaceOriginals {
-                // Atomic replace — a failure can't destroy the original.
                 if (try? FileManager.default.replaceItemAt(url, withItemAt: out)) != nil {
                     finalName = url.lastPathComponent
                     after = MediaConverter.fileSize(url)

@@ -25,7 +25,8 @@ enum MediaConverter {
         }
     }
 
-    static func compressVideo(_ url: URL, quality: VideoQuality) async throws -> URL {
+    static func compressVideo(_ url: URL, quality: VideoQuality,
+                              onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> URL {
         let asset = AVURLAsset(url: url)
         let candidates: [String]
         let fileType: AVFileType
@@ -50,7 +51,16 @@ enum MediaConverter {
         }
         guard let export else { throw ConvertError.exportFailed }
         let out = uniqueOutput(for: url, ext: ext)
+
+        let progressTask = Task {
+            for await state in export.states(updateInterval: 0.3) {
+                if case .exporting(let progress) = state { onProgress(progress.fractionCompleted) }
+            }
+        }
+        defer { progressTask.cancel() }
+
         try await export.export(to: out, as: fileType)
+        onProgress(1.0)
         return out
     }
 

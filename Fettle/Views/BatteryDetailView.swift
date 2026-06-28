@@ -137,9 +137,9 @@ struct BatteryDetailView: View {
         VStack(spacing: 10) {
             SectionLabel(text: "BATTERY HEALTH")
             HStack(spacing: 8) {
-                healthCell(value: "\(h.maxCapacityPercent)%", label: "Max Capacity")
-                healthCell(value: "\(h.cycleCount)", label: "Cycle Count")
-                healthCell(value: String(format: "%.0f°C", h.tempC), label: "Temperature")
+                healthCell(value: "\(h.maxCapacityPercent)%", label: "Capacity")
+                healthCell(value: "\(h.cycleCount)", label: "Cycles")
+                healthCell(value: h.tempC > 0 ? String(format: "%.0f°C", h.tempC) : "—", label: "Temp")
             }
         }
     }

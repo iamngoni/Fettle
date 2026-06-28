@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// One editable line. A stable id lets the editor delete/reorder lines without
+/// the index-based crashes a `[String]` + `ForEach(indices)` would risk.
+struct CalcLine: Identifiable, Equatable {
+    let id = UUID()
+    var text: String
+}
+
 @MainActor
 @Observable
 final class CalculatorTool: FettleTool {
@@ -9,7 +16,7 @@ final class CalculatorTool: FettleTool {
     let tint = Color(hex: 0xFF9F0A)
     let section: ToolSection = .tools
 
-    var lines: [String] {
+    var lines: [CalcLine] {
         didSet { saveLines() }
     }
     private(set) var rates: [String: Double] = ["USD": 1]
@@ -23,9 +30,16 @@ final class CalculatorTool: FettleTool {
     init() {
         if let data = UserDefaults.standard.data(forKey: "calc.lines"),
            let saved = try? JSONDecoder().decode([String].self, from: data), !saved.isEmpty {
-            lines = saved
+            let nonBlank = saved.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            let legacyExamples = ["18% of 1250", "20 EUR in USD", "2 kg in pounds", "(12 + 8) * 3"]
+            if nonBlank == legacyExamples {
+                UserDefaults.standard.removeObject(forKey: "calc.lines")
+                lines = [CalcLine(text: "")]
+            } else {
+                lines = saved.map { CalcLine(text: $0) }
+            }
         } else {
-            lines = [""]
+            lines = [CalcLine(text: "")]
         }
         if let data = UserDefaults.standard.data(forKey: "calc.rates"),
            let cached = try? JSONDecoder().decode([String: Double].self, from: data) {
@@ -34,18 +48,28 @@ final class CalculatorTool: FettleTool {
         fetchRates()
     }
 
-    func result(for line: String) -> String? {
-        CalcEngine.evaluate(line, rates: rates)
+    func result(for text: String) -> String? {
+        CalcEngine.evaluate(text, rates: rates)
     }
 
+    /// Keep exactly one trailing blank line so there's always room to type.
     func ensureTrailingBlank() {
-        if lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == false {
-            lines.append("")
+        if lines.last?.text.trimmingCharacters(in: .whitespaces).isEmpty == false {
+            lines.append(CalcLine(text: ""))
         }
     }
 
+    func removeLine(_ line: CalcLine) {
+        lines.removeAll { $0.id == line.id }
+        if lines.isEmpty { lines = [CalcLine(text: "")] }
+    }
+
+    func clearAll() {
+        lines = [CalcLine(text: "")]
+    }
+
     private func saveLines() {
-        if let data = try? JSONEncoder().encode(lines) {
+        if let data = try? JSONEncoder().encode(lines.map(\.text)) {
             UserDefaults.standard.set(data, forKey: "calc.lines")
         }
     }

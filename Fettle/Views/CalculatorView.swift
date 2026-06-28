@@ -3,16 +3,17 @@ import SwiftUI
 struct CalculatorView: View {
     @Bindable var tool: CalculatorTool
     @Environment(AppState.self) private var app
+    @State private var hovered: UUID?
 
     private let resultColor = Color(hex: 0x7DE08F)
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelHeader(title: "Calculator", pill: nil) { app.route = .dashboard }
+            header
             ScrollView {
                 VStack(spacing: 2) {
-                    ForEach(tool.lines.indices, id: \.self) { i in
-                        row(i)
+                    ForEach($tool.lines) { $line in
+                        row($line)
                     }
                 }
                 .padding(.vertical, 12).padding(.horizontal, 14)
@@ -24,15 +25,49 @@ struct CalculatorView: View {
         .onAppear { tool.ensureTrailingBlank() }
     }
 
-    private func row(_ i: Int) -> some View {
-        let isComment = tool.lines[i].trimmingCharacters(in: .whitespaces).hasPrefix("//")
-            || tool.lines[i].trimmingCharacters(in: .whitespaces).hasPrefix("#")
-        return HStack(spacing: 10) {
-            TextField(i == 0 && tool.lines.count == 1 ? "Try  20 EUR in USD" : "", text: $tool.lines[i], axis: .horizontal)
+    private var header: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button { app.route = .dashboard } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xC7C7CE))
+                        .frame(width: 28, height: 28)
+                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.card))
+                }.buttonStyle(.plain)
+                Text("Calculator").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                Spacer()
+                if tool.lines.contains(where: { !$0.text.isEmpty }) {
+                    Button { tool.clearAll() } label: {
+                        Text("Clear").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.textTertiary)
+                    }.buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 12)
+            Hairline()
+        }
+    }
+
+    private func row(_ line: Binding<CalcLine>) -> some View {
+        let text = line.wrappedValue.text
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let isComment = trimmed.hasPrefix("//") || trimmed.hasPrefix("#")
+        let isOnlyEmpty = tool.lines.count == 1 && text.isEmpty
+        let canDelete = tool.lines.count > 1
+        let showDelete = hovered == line.wrappedValue.id && canDelete
+
+        return HStack(spacing: 8) {
+            TextField(isOnlyEmpty ? "Try 20 EUR in USD" : "", text: line.text, axis: .horizontal)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(isComment ? Color(hex: 0x5A5A62) : Color(hex: 0xD7D7DC))
-            if let result = tool.result(for: tool.lines[i]) {
+
+            if showDelete {
+                Button { tool.removeLine(line.wrappedValue) } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 12))
+                        .foregroundStyle(Color(hex: 0x6E6E78))
+                }.buttonStyle(.plain)
+            }
+            if let result = tool.result(for: text) {
                 Text(result)
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
                     .foregroundStyle(resultColor)
@@ -40,6 +75,11 @@ struct CalculatorView: View {
             }
         }
         .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        .onHover { inside in
+            if inside { hovered = line.wrappedValue.id }
+            else if hovered == line.wrappedValue.id { hovered = nil }
+        }
     }
 
     private var footer: some View {
